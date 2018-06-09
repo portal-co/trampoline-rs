@@ -42,7 +42,8 @@
 //! well-known version of this function which takes an extra argument: an
 //! accumulator. Take a look:
 //! ```rust
-//! fn fac(n: u128) -> u128 {//!
+//! fn fac(n: u128) -> u128 {
+//!     //!
 //!     fn fac_with_acc(n: u128, acc: u128) -> u128 {
 //!         if n > 1 {
 //!             fac_with_acc(n - 1, acc * n)
@@ -158,6 +159,9 @@ pub fn tramp<T>(start: impl FnOnce() -> Rec<T> + 'static) -> T {
 
 /// Turns a (probably recursive) tail call into a return value of
 /// type `Rec`. The variant created is `Rec::Call`.
+/// Given an expression `x` of type `T`, then `rec_call!(x)` has type `Rec<T>`.
+/// It is equivalent to, given a fictional attribute "optimize_tail_call",
+/// `#[optimize_tail_call] return x` transforming `T` into `Rec<T>`.
 #[macro_export]
 macro_rules! rec_call {
     ($call:expr) => {
@@ -166,6 +170,8 @@ macro_rules! rec_call {
 }
 
 /// Returns a value from a `Rec`-function. This means the recursion is done.
+/// Given an expression `x` of type `T`, then `rec_ret!(x)` has type `Rec<T>`.
+/// It is equivalent to `return x` transforming `T` into `Rec<T>`.
 #[macro_export]
 macro_rules! rec_ret {
     ($val:expr) => {
