@@ -1,3 +1,88 @@
+//! This crate provides some facilities for recursing in Rust.
+//!
+//! # Motivation
+//! Most iterative problems can be solved using recursion instead of loops.
+//! In fact, when you start learning functional programming, you will see
+//! the possibility of solving a given problem using recursion. If the language
+//! does not optimize away some kinds of recursion, programming functionally
+//! may be hard, because stack overflow may happen eventually if a big case of
+//! recursion happens.
+//!
+//! A common optimization is the so called "tail call optimization", "tail
+//! call reduction" or any similar name. First, let's understand tail call.
+//! Tail call is basically a function found in "tail" position of a function
+//! body. The tail position means the call is the last thing done in the
+//! function body. Optimizing it away means that, instead of generating a
+//! new stack frame for the called function, the compiler will reuse the
+//! current frame for the called function. In fact, the call may be turned into
+//! a loop. But it still is recursion, because the programmer did not write a
+//! loop. It's just an optimization.
+//!
+//! Currently, Rust does not provide any language item to optimize the tail
+//! call. There is a "promised" feature named `become`. `become`, for now,
+//! is just a reserved identifer, but the intention is that it acts like a
+//! return, but does a tail call reduction. Well, there is no prevision for
+//! when this is implemented or if it ever will be implemented. So, we decided
+//! to create a library allowing the programmer to write optimized recursion
+//! with tail calls.
+//!
+//! # Example
+//! Take a look in this factorial function:
+//! ```rust
+//! fn fac(n: u128) -> u128 {
+//!     if n > 1 {
+//!         n * fac(n - 1)
+//!     } else {
+//!         n
+//!     }
+//! }
+//! ```
+//! Clearly, the function above is not tail recursive. After the recursive
+//! call, we still have to multiply the result by `n`. However, there is a
+//! well-known version of this function which takes an extra argument: an
+//! accumulator. Take a look:
+//! ```rust
+//! fn fac(n: u128) -> u128 {//!
+//!     fn fac_with_acc(n: u128, acc: u128) -> u128 {
+//!         if n > 1 {
+//!             fac_with_acc(n - 1, acc * n)
+//!         } else {
+//!             1
+//!         }
+//!     }
+//!
+//!     fac_with_acc(n, 1)
+//! }
+//! ```
+//! The function `fac_with_acc` is tail recursive. There is no job to be done
+//! after the call to itself. There is only one problem: Rust does not do any
+//! tail call optimization (yet). Now, the crate `tramp` does its job. We
+//! implemented in this crate a trampoline. A trampoline simulates a tail
+//! call optimization by calling a function which might return another function
+//! (which will be called again) or a computed result. The trampoline will
+//! keep calling in a loop the returned function, and whenever the function
+//! returns a computed value instead of a function, the trampoline returns the
+//! value. Take a look in the example below.
+//!
+//! ```rust
+//! #[macro_use] extern crate tramp;
+//!
+//! use tramp::Rec;
+//!
+//! fn factorial(n: u128) -> u128 {
+//!     fn fac_with_acc(n: u128, acc: u128) -> Rec<u128> {
+//!         if n > 1 {
+//!             rec_call!(fac_with_acc(n - 1, acc * n))
+//!         } else {
+//!             rec_ret!(acc)
+//!         }
+//!     }
+//!
+//!     tramp!(fac_with_acc(n, 1))
+//! }
+//!
+//! assert_eq!(factorial(5), 120);
+//! ```
 use std::fmt;
 
 /// A single recursive-function result.
@@ -58,10 +143,10 @@ impl<T> fmt::Debug for Thunk<T> {
 }
 
 /// Given an input closure which returns the `Rec` type, this function performs
-/// a trampolin over the returned value. While `Rec::Call(thunk)` is returned,
+/// a trampoline over the returned value. While `Rec::Call(thunk)` is returned,
 /// this function will keep evauating `thunk`. Whenever `Rec::Done(x)` is
 /// found, `x` is returned.
-pub fn trampolin<T>(start: impl FnOnce() -> Rec<T> + 'static) -> T {
+pub fn tramp<T>(start: impl FnOnce() -> Rec<T> + 'static) -> T {
     let mut res = start();
     loop {
         match res {
@@ -90,8 +175,8 @@ macro_rules! rec_ret {
 
 /// Executes a `Rec`-function call inside a trampolin.
 #[macro_export]
-macro_rules! trampolin {
+macro_rules! tramp {
     ($call:expr) => {
-        $crate::trampolin(move || $call)
+        $crate::tramp(move || $call)
     };
 }
