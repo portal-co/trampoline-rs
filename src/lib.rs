@@ -86,16 +86,19 @@
 //! ```
 use std::fmt;
 
-/// A single recursive-function result.
+/// A single recursive-function result with static lifetime.
+pub type Rec<T> = BorrowRec<'static, T>;
+
+/// A single borrowed recursive-function result.
 #[derive(Debug)]
-pub enum Rec<T> {
+pub enum BorrowRec<'a, T> {
     /// This variant is returned when the function is done; i.e. this the
     /// result of the computation.
     Ret(T),
     /// This variant is returned when the function is about to call itself
     /// or another in a tail position (i.e. there is no job after the call),
     /// generally indicates recursion.
-    Call(Thunk<Rec<T>>),
+    Call(Thunk<'a, BorrowRec<'a, T>>),
 }
 
 trait FnThunk {
@@ -107,8 +110,8 @@ trait FnThunk {
 /// A delayed computation. This can be used in lazy evaluation environments.
 /// Also, it is used to delay a tail call and emulate TCO (tail call
 /// optimization).
-pub struct Thunk<T> {
-    fun: Box<FnThunk<Out = T>>,
+pub struct Thunk<'a, T> {
+    fun: Box<FnThunk<Out = T> + 'a>,
 }
 
 impl<T, F> FnThunk for F
@@ -122,10 +125,10 @@ where
     }
 }
 
-impl<T> Thunk<T> {
+impl<'a, T> Thunk<'a, T> {
     /// Creates a new thunk from the given function. Probably you will end up
     /// passing closures to this function.
-    pub fn new(fun: impl FnOnce() -> T + 'static) -> Self {
+    pub fn new(fun: impl FnOnce() -> T + 'a) -> Self {
         Self {
             fun: Box::new(fun),
         }
@@ -137,7 +140,7 @@ impl<T> Thunk<T> {
     }
 }
 
-impl<T> fmt::Debug for Thunk<T> {
+impl<'a, T> fmt::Debug for Thunk<'a, T> {
     fn fmt(&self, fmtr: &mut fmt::Formatter) -> fmt::Result {
         write!(fmtr, "thunk {} ptr: {:?} {}", '{', &*self.fun as *const _, '}')
     }
@@ -147,12 +150,12 @@ impl<T> fmt::Debug for Thunk<T> {
 /// a trampoline over the returned value. While `Rec::Call(thunk)` is returned,
 /// this function will keep evauating `thunk`. Whenever `Rec::Done(x)` is
 /// found, `x` is returned.
-pub fn tramp<T>(start: impl FnOnce() -> Rec<T> + 'static) -> T {
+pub fn tramp<'a, T>(start: impl FnOnce() -> BorrowRec<'a, T> + 'a) -> T {
     let mut res = start();
     loop {
         match res {
-            Rec::Ret(x) => break x,
-            Rec::Call(thunk) => res = thunk.compute(),
+            BorrowRec::Ret(x) => break x,
+            BorrowRec::Call(thunk) => res = thunk.compute(),
         }
     }
 }
@@ -165,7 +168,7 @@ pub fn tramp<T>(start: impl FnOnce() -> Rec<T> + 'static) -> T {
 #[macro_export]
 macro_rules! rec_call {
     ($call:expr) => {
-        return $crate::Rec::Call($crate::Thunk::new(move || $call));
+        return $crate::BorrowRec::Call($crate::Thunk::new(move || $call));
     };
 }
 
@@ -175,7 +178,7 @@ macro_rules! rec_call {
 #[macro_export]
 macro_rules! rec_ret {
     ($val:expr) => {
-        return $crate::Rec::Ret($val);
+        return $crate::BorrowRec::Ret($val);
     };
 }
 

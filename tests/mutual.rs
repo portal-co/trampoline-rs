@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate tramp;
 
-
 // Not the greatest way of computing "is even" or "is odd".
 mod oddness {
     use tramp::Rec;
