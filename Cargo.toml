@@ -1,6 +1,6 @@
 [package]
 name = "tramp"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Bruno Corrêa Zimmermann <brunoczim@gmail.com>"]
 description = "Trampoline for recursive functions, with support for mutual recursion"
 repository = "https://gitlab.com/bzim/trampoline-rs/"

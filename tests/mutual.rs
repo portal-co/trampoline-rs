@@ -3,7 +3,7 @@ extern crate tramp;
 
 // Not the greatest way of computing "is even" or "is odd".
 mod oddness {
-    use tramp::Rec;
+    use tramp::{tramp, Rec};
 
     fn is_even_rec(x: u128) -> Rec<bool> {
         if x > 0 {
@@ -22,11 +22,11 @@ mod oddness {
     }
 
     pub fn is_even(x: u128) -> bool {
-        tramp!(is_even_rec(x))
+        tramp(is_even_rec(x))
     }
 
     pub fn is_odd(x: u128) -> bool {
-        tramp!(is_odd_rec(x))
+        tramp(is_odd_rec(x))
     }
 }
 

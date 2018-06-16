@@ -68,7 +68,7 @@
 //! ```rust
 //! #[macro_use] extern crate tramp;
 //!
-//! use tramp::Rec;
+//! use tramp::{tramp, Rec};
 //!
 //! fn factorial(n: u128) -> u128 {
 //!     fn fac_with_acc(n: u128, acc: u128) -> Rec<u128> {
@@ -79,7 +79,7 @@
 //!         }
 //!     }
 //!
-//!     tramp!(fac_with_acc(n, 1))
+//!     tramp(fac_with_acc(n, 1))
 //! }
 //!
 //! assert_eq!(factorial(5), 120);
@@ -146,12 +146,11 @@ impl<'a, T> fmt::Debug for Thunk<'a, T> {
     }
 }
 
-/// Given an input closure which returns the `Rec` type, this function performs
-/// a trampoline over the returned value. While `Rec::Call(thunk)` is returned,
+/// Given an input which of type `BorrowRec`, this function performs
+/// a trampoline over the value. While `Rec::Call(thunk)` is returned,
 /// this function will keep evauating `thunk`. Whenever `Rec::Done(x)` is
 /// found, `x` is returned.
-pub fn tramp<'a, T>(start: impl FnOnce() -> BorrowRec<'a, T> + 'a) -> T {
-    let mut res = start();
+pub fn tramp<'a, T>(mut res: BorrowRec<'a, T>) -> T {
     loop {
         match res {
             BorrowRec::Ret(x) => break x,
@@ -179,13 +178,5 @@ macro_rules! rec_call {
 macro_rules! rec_ret {
     ($val:expr) => {
         return $crate::BorrowRec::Ret($val);
-    };
-}
-
-/// Executes a `Rec`-function call inside a trampolin.
-#[macro_export]
-macro_rules! tramp {
-    ($call:expr) => {
-        $crate::tramp(move || $call)
     };
 }
