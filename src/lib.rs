@@ -84,7 +84,10 @@
 //!
 //! assert_eq!(factorial(5), 120);
 //! ```
-use std::fmt;
+#![no_std]
+extern crate alloc;
+use alloc::boxed::Box;
+use core::fmt;
 
 /// A single recursive-function result with static lifetime.
 pub type Rec<T> = BorrowRec<'static, T>;
@@ -111,7 +114,7 @@ trait FnThunk {
 /// Also, it is used to delay a tail call and emulate TCO (tail call
 /// optimization).
 pub struct Thunk<'a, T> {
-    fun: Box<FnThunk<Out = T> + 'a>,
+    fun: Box<dyn FnThunk<Out = T> + 'a>,
 }
 
 impl<T, F> FnThunk for F
