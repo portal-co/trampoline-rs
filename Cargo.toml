@@ -1,9 +1,13 @@
 [package]
-name = "tramp"
-version = "0.3.0"
-authors = ["Bruno Corrêa Zimmermann <brunoczim@gmail.com>"]
-description = "Trampoline for recursive functions, with support for mutual recursion"
-repository = "https://gitlab.com/bzim/trampoline-rs/"
+name = "portal-pc-tramp"
+version = "0.3.0+portal"
+authors = ["Bruno Corrêa Zimmermann <brunoczim@gmail.com>","gkgoat"]
+description = "Trampoline for recursive functions, with support for mutual recursion (portal version)"
+repository = "https://github.com/portal-co/trampoline-rs.git"
 keywords = ["trampoline", "recursion", "functional", "become"]
 categories = ["algorithms", "rust-patterns"]
 license = "MIT"
+
+[lib]
+name = "tramp"
+ 
